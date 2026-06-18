@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm -v)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "WebSearch",
+      "Bash(npm run *)",
+      "Bash(curl -s --max-time 3 http://localhost:11434/api/tags)",
+      "Bash(curl -s http://localhost:11434/api/tags)",
+      "Bash(python3 -c \"import sys,json; [print\\(m['name']\\) for m in json.load\\(sys.stdin\\)['models']]\")",
+      "Bash(curl -s http://localhost:3001/api/health)",
+      "Read(//private/tmp/**)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s --max-time 420 -X POST http://localhost:3001/api/analysis -F 'jobDescription=<//tmp/jd.txt' -F resumeFile=@/tmp/sample-resume.pdf -F coverLetterTone=direct -F aiProvider=ollama -o /tmp/analysis-response.json -w 'HTTP %{http_code} in %{time_total}s\\\\n')",
+      "Bash(python3 -c ' *)",
+      "Bash(npx tsx -e ' *)",
+      "Bash(cat)",
+      "Bash(npx tsx *)",
+      "Bash(cp /tmp/parsetest.ts /Users/jonathan/projects/jobofable/backend/parsetest.ts && npx tsx parsetest.ts)",
+      "Bash(xargs ps -o pid,command -p)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(curl -s --max-time 420 -X POST http://localhost:3001/api/analysis -F 'jobDescription=<//tmp/jd.txt' -F resumeFile=@/Users/jonathan/Downloads/Jonathan_Ramalho_Resume.pdf -F coverLetterTone=professional -F aiProvider=ollama -o /tmp/real-analysis.json -w 'HTTP %{http_code} in %{time_total}s\\\\n')",
+      "Bash(cp /tmp/real-optimized-resume.pdf \"/Users/jonathan/Downloads/Jonathan_Ramalho_Resume_OPTIMIZED_PREVIEW.pdf\" && echo copied)"
+    ]
+  }
+}
