@@ -37,14 +37,27 @@ export interface AnalysisListItem {
   jobTitle: string | null;
   matchScore: number | null;
   createdAt: Date;
+  /** Id of the tracked application promoted from this analysis, if any. */
+  applicationId: string | null;
 }
 
 /** History list, newest first — lightweight columns only. */
-export function listAnalyses(): Promise<AnalysisListItem[]> {
-  return prisma.analysis.findMany({
+export async function listAnalyses(): Promise<AnalysisListItem[]> {
+  const rows = await prisma.analysis.findMany({
     orderBy: { createdAt: 'desc' },
-    select: { id: true, companyName: true, jobTitle: true, matchScore: true, createdAt: true },
+    select: {
+      id: true,
+      companyName: true,
+      jobTitle: true,
+      matchScore: true,
+      createdAt: true,
+      applications: { select: { id: true }, take: 1 },
+    },
   });
+  return rows.map(({ applications, ...row }) => ({
+    ...row,
+    applicationId: applications[0]?.id ?? null,
+  }));
 }
 
 export interface StoredAnalysis {
@@ -55,6 +68,8 @@ export interface StoredAnalysis {
   jobDescription: string;
   createdAt: Date;
   updatedAt: Date;
+  /** Id of the tracked application promoted from this analysis, if any. */
+  applicationId: string | null;
   /** The full structured response that was returned to the client originally. */
   result: unknown;
   /** The cached resume profile, if the pipeline produced one. */
@@ -63,7 +78,10 @@ export interface StoredAnalysis {
 
 /** Full stored record (parsed JSON) plus metadata, or null when not found. */
 export async function getAnalysisById(id: string): Promise<StoredAnalysis | null> {
-  const record = await prisma.analysis.findUnique({ where: { id } });
+  const record = await prisma.analysis.findUnique({
+    where: { id },
+    include: { applications: { select: { id: true }, take: 1 } },
+  });
   if (!record) return null;
 
   return {
@@ -74,6 +92,7 @@ export async function getAnalysisById(id: string): Promise<StoredAnalysis | null
     jobDescription: record.jobDescription,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
+    applicationId: record.applications[0]?.id ?? null,
     result: parseJson(record.rawResultJson, 'rawResultJson'),
     profile: record.profileJson ? parseJson(record.profileJson, 'profileJson') : null,
   };

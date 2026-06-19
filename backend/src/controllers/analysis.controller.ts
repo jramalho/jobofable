@@ -14,6 +14,7 @@ import {
   listAnalyses,
   saveAnalysis,
 } from '../services/analysisStorage.service';
+import { createApplicationFromAnalysis } from '../services/application.service';
 import { applyKeywordsToResume } from '../services/resume.service';
 import { NotFoundError, ValidationError } from '../utils/errors';
 
@@ -84,6 +85,16 @@ export async function removeAnalysis(req: Request, res: Response): Promise<void>
     throw new NotFoundError(`Analysis "${id}" was not found.`);
   }
   res.status(204).send();
+}
+
+/** Promotes a stored analysis into a tracked job application (idempotent). */
+export async function createAnalysisApplication(req: Request, res: Response): Promise<void> {
+  const id = parseAnalysisId(req);
+  const result = await createApplicationFromAnalysis(id);
+  if (!result) {
+    throw new NotFoundError(`Analysis "${id}" was not found.`);
+  }
+  res.status(result.created ? 201 : 200).json(result.application);
 }
 
 function parseAnalysisId(req: Request): string {

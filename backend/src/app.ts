@@ -1,7 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import { analysisRoutes } from './routes/analysis.routes';
+import { applicationRoutes } from './routes/application.routes';
+import { companyRoutes } from './routes/company.routes';
+import { contactRoutes } from './routes/contact.routes';
 import { exportRoutes } from './routes/export.routes';
+import { followUpRoutes } from './routes/followUp.routes';
 import { errorHandler } from './utils/errors';
 
 export function createApp(): express.Express {
@@ -20,6 +24,10 @@ export function createApp(): express.Express {
 
   app.use('/api/analysis', analysisRoutes);
   app.use('/api/export', exportRoutes);
+  app.use('/api/companies', companyRoutes);
+  app.use('/api/applications', applicationRoutes);
+  app.use('/api/contacts', contactRoutes);
+  app.use('/api/follow-ups', followUpRoutes);
 
   app.use(errorHandler);
 

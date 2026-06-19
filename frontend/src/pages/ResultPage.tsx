@@ -1,11 +1,17 @@
 import { useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
+import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { LoadingState } from '../components/LoadingState';
 import { extractErrorMessage } from '../lib/apiClient';
 import { useGetAnalysisByIdQuery } from '../features/analysis/api/analysisApi';
+import {
+  useCheckDuplicatesQuery,
+  useCreateApplicationFromAnalysisMutation,
+} from '../features/tracker/api/trackerApi';
+import { DuplicateWarning } from '../features/tracker/components/DuplicateWarning';
 import { setCurrentAnalysis } from '../features/analysis/slices/analysisSlice';
 import { CoverLetterEditor } from '../features/analysis/components/CoverLetterEditor';
 import { ExportActions } from '../features/analysis/components/ExportActions';
@@ -41,7 +47,36 @@ export function ResultPage() {
     }
   }, [data, loadedAnalysisId, dispatch]);
 
+  // Warn before tracking if this analysis looks like a job already applied to.
+  const jobForDuplicates = reduxResult?.job ?? data?.result.job;
+  const { data: duplicates } = useCheckDuplicatesQuery(
+    { companyName: jobForDuplicates?.companyName, jobTitle: jobForDuplicates?.title },
+    { skip: !jobForDuplicates?.companyName && !jobForDuplicates?.title },
+  );
+
   const editor = useResultEditor();
+  const navigate = useNavigate();
+  const [trackApplication, trackStatus] = useCreateApplicationFromAnalysisMutation();
+
+  // The persisted (DB) analysis id — present for saved analyses; the action
+  // needs a real id, so it's only offered when persistence succeeded.
+  const persistedAnalysisId = editor.analysisResult?.persistedAnalysisId ?? data?.id ?? null;
+  // Known link state (from the hydrated record); fresh runs rely on idempotency.
+  const linkedApplicationId = data?.applicationId ?? null;
+
+  async function handleTrackApplication() {
+    if (!persistedAnalysisId) return;
+    if (linkedApplicationId) {
+      navigate(`/applications/${linkedApplicationId}`);
+      return;
+    }
+    try {
+      const application = await trackApplication(persistedAnalysisId).unwrap();
+      navigate(`/applications/${application.id}`);
+    } catch {
+      // Surfaced inline below via trackStatus.error.
+    }
+  }
 
   if (needsFetch) {
     return (
@@ -110,6 +145,32 @@ export function ResultPage() {
       </header>
 
       <main className="mx-auto max-w-5xl space-y-6 px-6 py-10">
+        {duplicates && (
+          <DuplicateWarning result={duplicates} companyName={analysisResult.job.companyName ?? undefined} />
+        )}
+
+        {persistedAnalysisId && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-100 bg-indigo-50 p-4">
+            <p className="text-sm text-indigo-900">
+              {linkedApplicationId
+                ? 'This analysis is being tracked as a job application.'
+                : 'Applying to this role? Track it as a job application to manage status, follow-ups and contacts.'}
+            </p>
+            <div className="flex flex-col items-end gap-1">
+              <Button onClick={handleTrackApplication} disabled={trackStatus.isLoading}>
+                {trackStatus.isLoading
+                  ? 'Opening…'
+                  : linkedApplicationId
+                    ? 'Open application →'
+                    : 'Track as application →'}
+              </Button>
+              {trackStatus.error && (
+                <span className="text-xs text-red-600">{extractErrorMessage(trackStatus.error)}</span>
+              )}
+            </div>
+          </div>
+        )}
+
         <ScoreCard
           score={analysisResult.matchScore}
           jobTitle={analysisResult.job.title}

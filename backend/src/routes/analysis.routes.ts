@@ -3,6 +3,7 @@ import multer from 'multer';
 import {
   applyKeywords,
   createAnalysis,
+  createAnalysisApplication,
   getAnalyses,
   getAnalysis,
   removeAnalysis,
@@ -48,3 +49,6 @@ analysisRoutes.post('/keywords', asyncHandler(applyKeywords));
 analysisRoutes.get('/', asyncHandler(getAnalyses));
 analysisRoutes.get('/:id', asyncHandler(getAnalysis));
 analysisRoutes.delete('/:id', asyncHandler(removeAnalysis));
+
+// Promote a stored analysis into a tracked job application (idempotent).
+analysisRoutes.post('/:id/application', asyncHandler(createAnalysisApplication));

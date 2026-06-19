@@ -8,11 +8,13 @@ import {
   useDeleteAnalysisMutation,
   useGetAnalysesQuery,
 } from '../features/analysis/api/analysisApi';
+import { useCreateApplicationFromAnalysisMutation } from '../features/tracker/api/trackerApi';
 import type { AnalysisListItem } from '../features/analysis/types/analysis.types';
 
 export function AnalysesPage() {
   const { data, isLoading, isError, error, refetch } = useGetAnalysesQuery();
   const [deleteAnalysis, deleteStatus] = useDeleteAnalysisMutation();
+  const [trackApplication, trackStatus] = useCreateApplicationFromAnalysisMutation();
   const navigate = useNavigate();
 
   const analyses = data?.analyses ?? [];
@@ -21,6 +23,15 @@ export function AnalysesPage() {
     const label = item.companyName ?? item.jobTitle ?? 'this analysis';
     if (!window.confirm(`Delete the saved analysis for ${label}? This cannot be undone.`)) return;
     await deleteAnalysis(item.id);
+  }
+
+  async function handleTrack(item: AnalysisListItem) {
+    if (item.applicationId) {
+      navigate(`/applications/${item.applicationId}`);
+      return;
+    }
+    const application = await trackApplication(item.id).unwrap();
+    navigate(`/applications/${application.id}`);
   }
 
   return (
@@ -80,11 +91,23 @@ export function AnalysesPage() {
                         <span className="font-medium text-slate-500">Match {item.matchScore}</span>
                       )}
                       <span>{formatDate(item.createdAt)}</span>
+                      {item.applicationId && (
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700">
+                          Tracked
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <Button variant="secondary" onClick={() => navigate(`/result/${item.id}`)}>
                       Open
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleTrack(item)}
+                      disabled={trackStatus.isLoading && trackStatus.originalArgs === item.id}
+                    >
+                      {item.applicationId ? 'Application →' : 'Track'}
                     </Button>
                     <Button
                       variant="ghost"

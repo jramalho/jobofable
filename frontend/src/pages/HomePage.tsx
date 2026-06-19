@@ -31,6 +31,9 @@ export function HomePage() {
             JobFit <span className="text-indigo-600">Resume AI</span>
           </span>
           <div className="flex items-center gap-4">
+            <Link to="/applications" className="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+              Applications
+            </Link>
             <Link to="/analyses" className="text-sm font-medium text-indigo-600 hover:text-indigo-700">
               Saved analyses
             </Link>

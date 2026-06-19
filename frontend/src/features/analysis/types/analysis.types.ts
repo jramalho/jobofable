@@ -154,6 +154,8 @@ export interface AnalysisListItem {
   jobTitle: string | null;
   matchScore: number | null;
   createdAt: string;
+  /** Id of the tracked application promoted from this analysis, if any. */
+  applicationId: string | null;
 }
 
 export interface AnalysesListResponse {
@@ -169,6 +171,8 @@ export interface StoredAnalysis {
   jobDescription: string;
   createdAt: string;
   updatedAt: string;
+  /** Id of the tracked application promoted from this analysis, if any. */
+  applicationId: string | null;
   result: AnalysisResponse;
   profile: ResumeProfilePayload | null;
 }
