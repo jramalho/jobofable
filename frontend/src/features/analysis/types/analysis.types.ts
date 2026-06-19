@@ -143,6 +143,34 @@ export interface AnalysisResponse {
   coverLetter: string;
   coverLetterMeta: CoverLetterMeta;
   profile: ResumeProfilePayload;
+  /** Database id assigned when the result was persisted; null if persistence failed. */
+  persistedAnalysisId?: string | null;
+}
+
+/** Row in the persisted analysis history list (GET /api/analysis). */
+export interface AnalysisListItem {
+  id: string;
+  companyName: string | null;
+  jobTitle: string | null;
+  matchScore: number | null;
+  createdAt: string;
+}
+
+export interface AnalysesListResponse {
+  analyses: AnalysisListItem[];
+}
+
+/** Full stored analysis (GET /api/analysis/:id) — metadata plus the original result. */
+export interface StoredAnalysis {
+  id: string;
+  companyName: string | null;
+  jobTitle: string | null;
+  matchScore: number | null;
+  jobDescription: string;
+  createdAt: string;
+  updatedAt: string;
+  result: AnalysisResponse;
+  profile: ResumeProfilePayload | null;
 }
 
 export type KeywordTarget = 'skills' | 'summary' | 'experience';

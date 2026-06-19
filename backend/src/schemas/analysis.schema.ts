@@ -112,6 +112,12 @@ export const savedResumeProfileSchema = z.object({
 });
 export type SavedResumeProfile = z.infer<typeof savedResumeProfileSchema>;
 
+/** Validates the `:id` route param for the stored-analysis endpoints. */
+export const analysisIdParamSchema = z.object({
+  id: z.string().trim().min(1, 'Analysis id is required.').max(64),
+});
+export type AnalysisIdParam = z.infer<typeof analysisIdParamSchema>;
+
 /** Output of the LinkedIn PDF analysis (LLM JSON, parsed defensively). */
 export const linkedInAnalysisSchema = z.object({
   headline: optionalString,

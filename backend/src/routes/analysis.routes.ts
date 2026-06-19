@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { applyKeywords, createAnalysis } from '../controllers/analysis.controller';
+import {
+  applyKeywords,
+  createAnalysis,
+  getAnalyses,
+  getAnalysis,
+  removeAnalysis,
+} from '../controllers/analysis.controller';
 import { ACCEPTED_MIME_TYPES } from '../utils/fileValidator';
 import { asyncHandler, ValidationError } from '../utils/errors';
 
@@ -36,3 +42,9 @@ analysisRoutes.post(
 // Second AI round: weave user-selected missing keywords into the chosen
 // targets of the current (edited) resume. JSON body, no file upload.
 analysisRoutes.post('/keywords', asyncHandler(applyKeywords));
+
+// Persisted analysis history (read/delete). `/keywords` is declared above so it
+// is never captured by the `/:id` param route.
+analysisRoutes.get('/', asyncHandler(getAnalyses));
+analysisRoutes.get('/:id', asyncHandler(getAnalysis));
+analysisRoutes.delete('/:id', asyncHandler(removeAnalysis));

@@ -19,6 +19,9 @@ export function NewAnalysisPage() {
           <Link to="/" className="text-lg font-bold text-slate-900">
             JobFit <span className="text-indigo-600">Resume AI</span>
           </Link>
+          <Link to="/analyses" className="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+            Saved analyses
+          </Link>
         </div>
       </header>
 

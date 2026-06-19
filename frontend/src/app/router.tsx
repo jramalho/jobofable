@@ -1,4 +1,5 @@
 import { createBrowserRouter } from 'react-router-dom';
+import { AnalysesPage } from '../pages/AnalysesPage';
 import { HomePage } from '../pages/HomePage';
 import { NewAnalysisPage } from '../pages/NewAnalysisPage';
 import { ResultPage } from '../pages/ResultPage';
@@ -7,6 +8,7 @@ export const router = createBrowserRouter(
   [
     { path: '/', element: <HomePage /> },
     { path: '/new-analysis', element: <NewAnalysisPage /> },
+    { path: '/analyses', element: <AnalysesPage /> },
     { path: '/result/:analysisId', element: <ResultPage /> },
   ],
   {

@@ -30,12 +30,17 @@ export function HomePage() {
           <span className="text-lg font-bold text-slate-900">
             JobFit <span className="text-indigo-600">Resume AI</span>
           </span>
-          <Link
-            to="/new-analysis"
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-          >
-            Start analysis
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link to="/analyses" className="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+              Saved analyses
+            </Link>
+            <Link
+              to="/new-analysis"
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            >
+              Start analysis
+            </Link>
+          </div>
         </div>
       </header>
 

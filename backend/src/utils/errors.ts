@@ -18,6 +18,12 @@ export class ValidationError extends AppError {
   }
 }
 
+export class NotFoundError extends AppError {
+  constructor(message: string, details?: unknown) {
+    super(message, 404, 'NOT_FOUND', details);
+  }
+}
+
 export class FileParsingError extends AppError {
   constructor(message: string, details?: unknown) {
     super(message, 422, 'FILE_PARSING_ERROR', details);

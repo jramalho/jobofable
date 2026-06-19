@@ -1,10 +1,12 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { API_BASE_URL } from '../../../lib/apiClient';
 import type {
+  AnalysesListResponse,
   AnalysisResponse,
   ApplyKeywordsPayload,
   ApplyKeywordsResponse,
   OptimizedResume,
+  StoredAnalysis,
 } from '../types/analysis.types';
 
 export interface ExportResumePayload {
@@ -26,6 +28,7 @@ const blobResponseHandler = (response: Response) => response.blob();
 export const analysisApi = createApi({
   reducerPath: 'analysisApi',
   baseQuery: fetchBaseQuery({ baseUrl: API_BASE_URL }),
+  tagTypes: ['Analysis'],
   endpoints: (builder) => ({
     createAnalysis: builder.mutation<AnalysisResponse, FormData>({
       query: (formData) => ({
@@ -33,6 +36,26 @@ export const analysisApi = createApi({
         method: 'POST',
         body: formData,
       }),
+      // A new analysis is persisted server-side, so the history list is stale.
+      invalidatesTags: [{ type: 'Analysis', id: 'LIST' }],
+    }),
+    getAnalyses: builder.query<AnalysesListResponse, void>({
+      query: () => '/analysis',
+      providesTags: (result) => [
+        { type: 'Analysis', id: 'LIST' },
+        ...(result?.analyses ?? []).map((item) => ({ type: 'Analysis' as const, id: item.id })),
+      ],
+    }),
+    getAnalysisById: builder.query<StoredAnalysis, string>({
+      query: (id) => `/analysis/${id}`,
+      providesTags: (_result, _error, id) => [{ type: 'Analysis', id }],
+    }),
+    deleteAnalysis: builder.mutation<void, string>({
+      query: (id) => ({ url: `/analysis/${id}`, method: 'DELETE' }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'Analysis', id },
+        { type: 'Analysis', id: 'LIST' },
+      ],
     }),
     applyKeywords: builder.mutation<ApplyKeywordsResponse, ApplyKeywordsPayload>({
       query: (payload) => ({
@@ -79,6 +102,9 @@ export const analysisApi = createApi({
 export const {
   useCreateAnalysisMutation,
   useApplyKeywordsMutation,
+  useGetAnalysesQuery,
+  useGetAnalysisByIdQuery,
+  useDeleteAnalysisMutation,
   useExportResumePdfMutation,
   useExportResumeDocxMutation,
   useExportCoverLetterPdfMutation,
