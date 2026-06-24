@@ -183,3 +183,30 @@ export interface DuplicateCheckResult {
   possibleDuplicateCompany: boolean;
   possibleDuplicateApplications: DuplicateApplicationMatch[];
 }
+
+export interface JobListing {
+  id: string;
+  source: string;
+  title: string;
+  company: string;
+  url: string;
+  location: string | null;
+  remote: boolean;
+  tags: string[];
+  description: string;
+  salary: string | null;
+  postedAt: string | null;
+}
+
+export interface JobSearchArgs {
+  keywords: string[];
+  remoteOnly?: boolean;
+  limit?: number;
+}
+
+export interface JobSearchResponse {
+  jobs: JobListing[];
+  totalFound: number;
+  alreadyTracked: number;
+  sources: string[];
+}

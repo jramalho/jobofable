@@ -12,6 +12,8 @@ import type {
   EventInput,
   FollowUpInput,
   FollowUpTask,
+  JobSearchArgs,
+  JobSearchResponse,
 } from '../types/tracker.types';
 
 /** Mutations on an application's sub-resources carry its id so the detail re-fetches. */
@@ -108,6 +110,11 @@ export const trackerApi = createApi({
       query: (body) => ({ url: '/applications/check-duplicates', method: 'POST', body }),
     }),
 
+    // Aggregated job search across public boards, minus what's already tracked.
+    searchJobs: builder.mutation<JobSearchResponse, JobSearchArgs>({
+      query: (body) => ({ url: '/jobs/search', method: 'POST', body }),
+    }),
+
     // Events
     createEvent: builder.mutation<unknown, ScopedBody<EventInput>>({
       query: ({ applicationId, body }) => ({
@@ -178,6 +185,7 @@ export const {
   useCreateApplicationFromAnalysisMutation,
   useGetCompaniesQuery,
   useCheckDuplicatesQuery,
+  useSearchJobsMutation,
   useCreateEventMutation,
   useCreateContactMutation,
   useUpdateContactMutation,

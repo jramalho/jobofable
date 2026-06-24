@@ -6,6 +6,7 @@ import { companyRoutes } from './routes/company.routes';
 import { contactRoutes } from './routes/contact.routes';
 import { exportRoutes } from './routes/export.routes';
 import { followUpRoutes } from './routes/followUp.routes';
+import { jobSearchRoutes } from './routes/jobSearch.routes';
 import { errorHandler } from './utils/errors';
 
 export function createApp(): express.Express {
@@ -28,6 +29,7 @@ export function createApp(): express.Express {
   app.use('/api/applications', applicationRoutes);
   app.use('/api/contacts', contactRoutes);
   app.use('/api/follow-ups', followUpRoutes);
+  app.use('/api/jobs', jobSearchRoutes);
 
   app.use(errorHandler);
 
