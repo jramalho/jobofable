@@ -4,6 +4,15 @@ Paste a job description, upload your current resume (PDF/DOCX) and optionally yo
 
 **Honest by design:** the AI improves wording, structure and positioning. It never invents experience, companies, titles, education, certifications, metrics or skills. When data is missing, it says so in a warning instead of guessing.
 
+## Highlights
+
+- **ATS-optimized resume + cover letter** generated from one job description, grounded in your real experience.
+- **0–100 match score** with per-category justifications, plus literal (non-hallucinated) keyword found/missing analysis.
+- **Saved profile (local-only):** your resume is cached in the browser so the next analysis needs only a new job description — no re-upload, and the parsing + resume-extraction AI call are skipped entirely. Nothing is stored on the server.
+- **Smart export filenames:** exports are named `name_company.pdf` (e.g. `jose_silva_google.pdf`), with the company pulled from the job description.
+- **Name spacing fix:** glued names from PDF extraction (`JonathanOliveira`) are restored to `Jonathan Oliveira` on output.
+- **Provider-agnostic AI:** Groq (cloud) or Ollama (local), switchable per request.
+
 ## Stack
 
 | Layer | Tech |
@@ -93,16 +102,17 @@ Frontend (`frontend/.env.example`):
 ## Product flow
 
 1. **Home** (`/`) — product pitch and "Generate optimized application" CTA.
-2. **New analysis** (`/new-analysis`) — paste the job description, upload resume (required, PDF/DOCX), upload LinkedIn export (optional, PDF), pick cover letter tone and AI provider, submit.
-3. **Backend pipeline** — validate files → extract & normalize text (in memory, nothing saved to disk) → analyze job, resume and LinkedIn in parallel → compare candidate vs job and score adherence → generate optimized resume + cover letter in parallel → return one structured JSON response.
-4. **Result** (`/result/:analysisId`) — match score, per-category scores with justifications, keywords found/missing, gaps, recommendations, warnings, plus editors for the resume and cover letter and PDF/DOCX export buttons. All edits live in Redux and the export endpoints receive the *edited* version.
+2. **New analysis** (`/new-analysis`) — paste the job description, provide your resume (upload a PDF/DOCX **or** reuse a saved profile), upload LinkedIn export (optional, PDF), pick cover letter tone and AI provider, submit. If you have a saved profile, the resume upload is optional and the form shows "Reusing your saved profile".
+3. **Backend pipeline** — validate input → get the resume text (extract from the uploaded file, or reuse the cached one) → analyze job, resume and LinkedIn in parallel (the resume-extraction call is skipped when a saved profile is sent) → compare candidate vs job and score adherence → generate optimized resume + cover letter in parallel → return one structured JSON response (including the analyzed `profile`, so the client can cache it). Files are processed in memory only — nothing is saved to disk on the server.
+4. **Result** (`/result/:analysisId`) — match score, per-category scores with justifications, keywords found/missing, gaps, recommendations, warnings, plus editors for the resume and cover letter and PDF/DOCX export buttons. All edits live in Redux and the export endpoints receive the *edited* version. Exports are named after the candidate + company.
 
 ## Main endpoints
 
 | Method & path | Purpose |
 | --- | --- |
-| `POST /api/analysis` | multipart/form-data: `jobDescription`, `resumeFile`, `linkedInFile?`, `coverLetterTone?`, `aiProvider?` → full analysis JSON |
-| `POST /api/export/resume/pdf` | JSON `{ resume, candidateName?, jobTitle? }` → PDF download |
+| `POST /api/analysis` | multipart/form-data: `jobDescription`, **either** `resumeFile` **or** `savedProfile` (JSON `{ resume, resumeText }`), `linkedInFile?`, `coverLetterTone?`, `aiProvider?` → full analysis JSON (includes a `profile` the client caches) |
+| `POST /api/analysis/keywords` | JSON `{ resume, jobTitle?, selections[], aiProvider? }` → weaves user-confirmed missing keywords into the chosen targets |
+| `POST /api/export/resume/pdf` | JSON `{ resume, candidateName?, companyName?, jobTitle? }` → PDF download (filename `name_company.pdf`) |
 | `POST /api/export/resume/docx` | same body → DOCX download |
 | `POST /api/export/cover-letter/pdf` | JSON `{ coverLetter, candidateName?, companyName?, jobTitle? }` → PDF download |
 | `POST /api/export/cover-letter/docx` | same body → DOCX download |
@@ -123,9 +133,24 @@ Frontend (`frontend/.env.example`):
 
 It is the research document behind the cover letter feature: purpose, recommended structure, market best/bad practices, structural templates per role type (React Native, Senior SWE, Mobile, Product, International Remote, Product-focused, Agency, Startup) and the rules the generator must follow. The prompt in `generateCoverLetter.prompt.ts` is the executable encoding of that document — when you change the rules there, update the prompt accordingly.
 
+## Saved profile (browser-local)
+
+So you don't re-upload (or re-pay for re-parsing) your resume on every job:
+
+- The resume is stored in the browser's **IndexedDB** (`frontend/src/lib/profileStorage.ts`) — never on the server. A "Save this resume in this browser" checkbox controls it.
+- **Phase 1 — skip re-upload:** the saved file pre-fills the upload field on the new-analysis page.
+- **Phase 2 — skip re-parsing:** after the first run, the backend returns the *analyzed* resume (`profile: { resume, resumeText }`); the client caches it and, on the next analysis, sends it as `savedProfile` instead of a file. The backend then skips both document parsing and the resume-extraction LLM call, using the new job description against the cached resume.
+- Uploading a new file at any time replaces the cached profile and forces a fresh parse. "Forget saved resume" clears it.
+
+## Export filenames & name spacing
+
+- **Filenames:** resume/cover-letter downloads are named from the candidate name + the company captured from the job description, slugified (accents stripped, e.g. `José Silva` + `Google` → `jose_silva_google.pdf`). Falls back to `optimized-resume.*` when both are missing. Logic in `frontend/src/lib/apiClient.ts` (authoritative, drives the actual download name) and mirrored in `backend/src/utils/exportFilename.ts` (Content-Disposition).
+- **Name spacing:** `backend/src/utils/personName.ts` restores spaces in names that PDF/DOCX extraction glued together (`JonathanOliveira` → `Jonathan Oliveira`, `JOAOSilva` → `JOAO Silva`), applied when the optimized resume header is built. The resume-extraction prompt also instructs the model to keep names spaced — covering the only case code can't split safely, a fully lowercase glued name (`joaosilva`).
+
 ## MVP limitations
 
-- No persistence: analyses live in the frontend's Redux state only; refreshing the result page loses the session (the `analysisId` is not retrievable from the server).
+- No server-side persistence: analyses live in the frontend's Redux state only; refreshing the result page loses the session (the `analysisId` is not retrievable from the server). The saved profile is the one exception, and it lives only in the user's browser (IndexedDB), not on the server.
+- The saved profile is per-browser and not synced across devices; clearing browser storage removes it.
 - No authentication, accounts, billing or rate limiting.
 - One language (English) for generated documents; UI in English.
 - Scanned/image-only PDFs are rejected (no OCR).
@@ -135,7 +160,7 @@ It is the research document behind the cover letter feature: purpose, recommende
 ## Next steps
 
 - Persist analyses (database + `GET /api/analysis/:id`) so result links survive refresh and can be shared.
-- Auth + multi-tenant accounts to become a real SaaS; per-user history.
+- Auth + multi-tenant accounts to become a real SaaS; per-user history, and a server-synced saved profile so it works across devices (the browser-local profile is the first step toward this).
 - Streaming progress (SSE) during the pipeline instead of a single long request.
 - More providers behind `AIProvider` (OpenAI-compatible, Anthropic), retries and fallback provider.
 - Multi-language generation, richer resume editor (add/remove entries), template themes for export.

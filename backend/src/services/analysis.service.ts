@@ -30,7 +30,7 @@ import { CoverLetterMeta } from '../schemas/coverLetter.schema';
 import { OptimizedResume } from '../schemas/resume.schema';
 import { sanitizeUserText } from '../utils/textCleaner';
 import { assertPdf } from '../utils/fileValidator';
-import { evaluateAdherence } from './ats.service';
+import { AtsCoverage, computeAtsCoverage, evaluateAdherence } from './ats.service';
 import { generateCoverLetter } from './coverLetter.service';
 import { extractTextFromFile } from './documentParser.service';
 import { generateOptimizedResume } from './resume.service';
@@ -77,6 +77,8 @@ export interface AnalysisResponse {
   optimizedResume: OptimizedResume;
   coverLetter: string;
   coverLetterMeta: CoverLetterMeta;
+  /** Deterministic ATS keyword coverage of the generated resume. */
+  atsCoverage: AtsCoverage;
   /** The analyzed resume + raw text, so the client can cache it and skip re-parsing next time. */
   profile: {
     resume: ResumeAnalysis;
@@ -155,10 +157,16 @@ export async function runAnalysis(input: RunAnalysisInput): Promise<AnalysisResp
     }),
   ]);
 
+  const atsCoverage = computeAtsCoverage(optimizedResumeResult.resume, job, candidateRawText);
+
   const warnings = dedupe([
     ...comparison.warnings,
     ...(linkedIn?.conflictsWithResume ?? []),
     ...optimizedResumeResult.warnings,
+    ...atsCoverage.overusedKeywords.map(
+      ({ keyword, count }) =>
+        `"${keyword}" appears ${count} times in the resume — that can read as keyword stuffing (some ATS penalize it). Aim for 2-3 mentions in different contexts.`,
+    ),
   ]);
 
   return {
@@ -191,6 +199,7 @@ export async function runAnalysis(input: RunAnalysisInput): Promise<AnalysisResp
     optimizedResume: optimizedResumeResult.resume,
     coverLetter: coverLetterResult.coverLetter,
     coverLetterMeta: coverLetterResult.meta,
+    atsCoverage,
     profile: { resume, resumeText },
   };
 }

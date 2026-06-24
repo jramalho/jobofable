@@ -59,7 +59,9 @@ const analysisSlice = createSlice({
     },
     /** Stores a fresh analysis response and seeds the editable copies. */
     setCurrentAnalysis(state, action: PayloadAction<AnalysisResponse>) {
-      state.currentAnalysisId = action.payload.analysisId;
+      // Track the route-facing id (the persisted DB id when available) so the
+      // result page can tell whether Redux already holds the requested analysis.
+      state.currentAnalysisId = action.payload.persistedAnalysisId ?? action.payload.analysisId;
       state.analysisResult = action.payload;
       state.editableResume = action.payload.optimizedResume;
       state.editableCoverLetter = action.payload.coverLetter;

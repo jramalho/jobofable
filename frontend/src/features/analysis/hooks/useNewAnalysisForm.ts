@@ -176,7 +176,10 @@ export function useNewAnalysisForm() {
     if ('data' in result && result.data) {
       await persistProfile(result.data.profile, result.data.optimizedResume.header.name);
       dispatch(setCurrentAnalysis(result.data));
-      navigate(`/result/${result.data.analysisId}`);
+      // Prefer the persisted DB id so the result route survives a refresh; fall
+      // back to the in-memory pipeline id if persistence failed server-side.
+      const routeId = result.data.persistedAnalysisId ?? result.data.analysisId;
+      navigate(`/result/${routeId}`);
     }
   }
 

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -8,9 +9,23 @@ import { LinkedInUpload } from '../features/analysis/components/LinkedInUpload';
 import { ProviderSelect } from '../features/analysis/components/ProviderSelect';
 import { ResumeUpload } from '../features/analysis/components/ResumeUpload';
 import { useNewAnalysisForm } from '../features/analysis/hooks/useNewAnalysisForm';
+import { useCheckDuplicatesQuery } from '../features/tracker/api/trackerApi';
+import { DuplicateWarning } from '../features/tracker/components/DuplicateWarning';
 
 export function NewAnalysisPage() {
   const form = useNewAnalysisForm();
+
+  // Heads-up if the pasted job description mentions a company already applied to.
+  const [dupJobDescription, setDupJobDescription] = useState('');
+  useEffect(() => {
+    const jd = form.jobDescription.trim();
+    const handle = setTimeout(() => setDupJobDescription(jd.length >= 50 ? jd : ''), 600);
+    return () => clearTimeout(handle);
+  }, [form.jobDescription]);
+  const { data: duplicates } = useCheckDuplicatesQuery(
+    { jobDescription: dupJobDescription },
+    { skip: dupJobDescription.length < 50 },
+  );
 
   return (
     <div className="min-h-screen">
@@ -18,6 +33,9 @@ export function NewAnalysisPage() {
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
           <Link to="/" className="text-lg font-bold text-slate-900">
             JobFit <span className="text-indigo-600">Resume AI</span>
+          </Link>
+          <Link to="/analyses" className="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+            Saved analyses
           </Link>
         </div>
       </header>
@@ -95,6 +113,8 @@ export function NewAnalysisPage() {
                 </div>
               </div>
             </Card>
+
+            {duplicates && <DuplicateWarning result={duplicates} />}
 
             {form.submitErrorMessage && (
               <div className="rounded-lg bg-red-50 p-4 text-sm text-red-700 ring-1 ring-red-200">

@@ -1,0 +1,155 @@
+// JobFit Resume AI — local-first persistence (SQLite via Prisma).
+//
+// NOTE ON ENUMS: the SQLite connector does not support Prisma `enum` blocks
+// (they are PostgreSQL/MySQL only). The three logical enums — ApplicationStatus,
+// GeneratedDocumentType and FollowUpStatus — are therefore stored as `String`
+// columns. Their canonical values live in `src/lib/enums.ts` so application code
+// stays type-safe; the allowed values are documented inline next to each field.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id                String   @id @default(cuid())
+  name              String
+  normalizedName    String
+  website           String?
+  domain            String?
+  country           String?
+  timezone          String?
+  notes             String?
+  blacklistedReason String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  applications JobApplication[]
+  contacts     Contact[]
+
+  @@index([normalizedName])
+}
+
+model Analysis {
+  id             String   @id @default(cuid())
+  companyName    String?
+  jobTitle       String?
+  jobDescription String
+  matchScore     Int?
+  rawResultJson  String
+  profileJson    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  applications JobApplication[]
+  documents    GeneratedDocument[]
+}
+
+model JobApplication {
+  id             String    @id @default(cuid())
+  companyId      String?
+  analysisId     String?
+  jobTitle       String
+  jobUrl         String?
+  source         String?
+  // ApplicationStatus: saved | applied | recruiter_screen | technical_interview |
+  // assignment | final_interview | offer | rejected | ghosted | withdrawn
+  status         String    @default("saved")
+  appliedAt      DateTime?
+  lastContactAt  DateTime?
+  nextFollowUpAt DateTime?
+  salaryMin      Int?
+  salaryMax      Int?
+  currency       String?
+  contractType   String?
+  remoteType     String?
+  jobDescription String?
+  matchScore     Int?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  company       Company?            @relation(fields: [companyId], references: [id])
+  analysis      Analysis?           @relation(fields: [analysisId], references: [id])
+  documents     GeneratedDocument[]
+  events        ApplicationEvent[]
+  contacts      Contact[]
+  followUpTasks FollowUpTask[]
+
+  @@index([companyId])
+  @@index([analysisId])
+  @@index([status])
+}
+
+model GeneratedDocument {
+  id            String   @id @default(cuid())
+  analysisId    String?
+  applicationId String?
+  // GeneratedDocumentType: resume | coverLetter
+  type          String
+  title         String?
+  contentJson   String
+  candidateName String?
+  companyName   String?
+  jobTitle      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  analysis    Analysis?       @relation(fields: [analysisId], references: [id])
+  application JobApplication? @relation(fields: [applicationId], references: [id])
+
+  @@index([analysisId])
+  @@index([applicationId])
+}
+
+model ApplicationEvent {
+  id            String   @id @default(cuid())
+  applicationId String
+  type          String
+  notes         String?
+  occurredAt    DateTime
+  createdAt     DateTime @default(now())
+
+  application JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+}
+
+model Contact {
+  id            String   @id @default(cuid())
+  companyId     String?
+  applicationId String?
+  name          String
+  role          String?
+  email         String?
+  linkedInUrl   String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company     Company?        @relation(fields: [companyId], references: [id])
+  application JobApplication? @relation(fields: [applicationId], references: [id])
+
+  @@index([companyId])
+  @@index([applicationId])
+}
+
+model FollowUpTask {
+  id            String    @id @default(cuid())
+  applicationId String
+  title         String
+  dueAt         DateTime
+  completedAt   DateTime?
+  // FollowUpStatus: pending | completed | dismissed
+  status        String    @default("pending")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  application JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+}

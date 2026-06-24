@@ -113,6 +113,23 @@ export interface CandidateAnalysis {
   warnings: string[];
 }
 
+export interface CoverageBreakdown {
+  score: number;
+  matched: string[];
+  missing: string[];
+}
+
+export interface AtsCoverage extends CoverageBreakdown {
+  /** Required-skill coverage (optional for analyses saved before this existed). */
+  required?: CoverageBreakdown;
+  /** Keywords repeated often enough to read as stuffing. */
+  overusedKeywords?: { keyword: string; count: number }[];
+  /** Covered keywords that only appear in low-prominence spots. */
+  buried?: string[];
+  /** Relevant acronyms present in only one form; suggested "Expansion (ACRONYM)". */
+  acronymSuggestions?: string[];
+}
+
 export interface CoverLetterMeta {
   tone: string;
   language: string;
@@ -142,7 +159,41 @@ export interface AnalysisResponse {
   optimizedResume: OptimizedResume;
   coverLetter: string;
   coverLetterMeta: CoverLetterMeta;
+  /** Deterministic ATS keyword coverage; optional for analyses saved before this existed. */
+  atsCoverage?: AtsCoverage;
   profile: ResumeProfilePayload;
+  /** Database id assigned when the result was persisted; null if persistence failed. */
+  persistedAnalysisId?: string | null;
+}
+
+/** Row in the persisted analysis history list (GET /api/analysis). */
+export interface AnalysisListItem {
+  id: string;
+  companyName: string | null;
+  jobTitle: string | null;
+  matchScore: number | null;
+  createdAt: string;
+  /** Id of the tracked application promoted from this analysis, if any. */
+  applicationId: string | null;
+}
+
+export interface AnalysesListResponse {
+  analyses: AnalysisListItem[];
+}
+
+/** Full stored analysis (GET /api/analysis/:id) — metadata plus the original result. */
+export interface StoredAnalysis {
+  id: string;
+  companyName: string | null;
+  jobTitle: string | null;
+  matchScore: number | null;
+  jobDescription: string;
+  createdAt: string;
+  updatedAt: string;
+  /** Id of the tracked application promoted from this analysis, if any. */
+  applicationId: string | null;
+  result: AnalysisResponse;
+  profile: ResumeProfilePayload | null;
 }
 
 export type KeywordTarget = 'skills' | 'summary' | 'experience';

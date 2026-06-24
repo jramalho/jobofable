@@ -9,6 +9,8 @@ import {
   GENERATE_RESUME_SYSTEM_PROMPT,
   buildGenerateResumePrompt,
 } from '../prompts/generateResume.prompt';
+import { DE_STUFF_SYSTEM_PROMPT, buildDeStuffPrompt } from '../prompts/deStuffResume.prompt';
+import { findResumeStuffing, OverusedKeyword } from './ats.service';
 import {
   Comparison,
   JobAnalysis,
@@ -19,6 +21,7 @@ import {
 import { OptimizedResume, optimizedResumeSchema } from '../schemas/resume.schema';
 import { ValidationError } from '../utils/errors';
 import { normalizePersonName } from '../utils/personName';
+import { removeProseDashes } from '../utils/proseText';
 
 export interface GenerateOptimizedResumeInput {
   job: JobAnalysis;
@@ -70,7 +73,27 @@ export async function generateOptimizedResume(
     },
   };
 
-  return enforceActivityClaims(resume, input.candidateRawText);
+  const guarded = enforceActivityClaims(resume, input.candidateRawText);
+  // Cut mechanical keyword stuffing (safe dedup), then clean travessão dashes.
+  let finalResume = humanizeResumeProse(tidyResume(guarded.resume));
+  const warnings = [...guarded.warnings];
+
+  // If a keyword is still over-used after the safe deterministic cuts, ask the
+  // model to thin it out — regex cannot rewrite prose without breaking it.
+  const stuffing = findResumeStuffing(finalResume, input.job);
+  if (stuffing.length > 0) {
+    const deStuffed = await deStuffResume(provider, finalResume, stuffing);
+    if (deStuffed) {
+      finalResume = humanizeResumeProse(
+        tidyResume(enforceActivityClaims(deStuffed, input.candidateRawText).resume),
+      );
+      warnings.push(
+        `Thinned over-used keyword(s) (${stuffing.map((s) => s.keyword).join(', ')}) so the resume reads naturally and avoids ATS stuffing penalties.`,
+      );
+    }
+  }
+
+  return { resume: finalResume, warnings };
 }
 
 export interface ApplyKeywordsInput {
@@ -242,6 +265,138 @@ function resolveInstructions(input: ApplyKeywordsInput): ResolvedKeywordInstruct
 }
 
 /**
+ * A generated skill is "grounded" when at least one of its distinctive tokens
+ * (length >= 3, non-numeric) appears in the candidate's real material. This
+ * removes fabricated technologies the job asked for but the candidate never
+ * listed (e.g. "Python", "FastAPI"), while leaving rephrasings of real skills
+ * ("Production React Native apps") untouched.
+ */
+function isSkillGrounded(skill: string, haystack: string): boolean {
+  const tokens = (skill.toLowerCase().match(/[a-z0-9.+#]+/g) ?? []).filter(
+    (token) => token.length >= 3 && !/^\d+$/.test(token),
+  );
+  if (tokens.length === 0) return true; // too short to judge (e.g. "C", "Go") — keep
+  return tokens.some((token) => haystack.includes(token));
+}
+
+/**
+ * Deterministically removes mechanical keyword stuffing that is SAFE to cut
+ * without rewriting sentences: the same skill listed in more than one category,
+ * and near-duplicate bullets within a role/project. Thinning a keyword that is
+ * woven into several genuinely-distinct bullets needs the model (regex would
+ * break grammar), so that is left to the prompt.
+ */
+function tidyResume(resume: OptimizedResume): OptimizedResume {
+  const seenSkill = new Set<string>();
+  const skills = resume.skills
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        const key = item.trim().toLowerCase();
+        if (!key || seenSkill.has(key)) return false;
+        seenSkill.add(key);
+        return true;
+      }),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  return {
+    ...resume,
+    skills,
+    experience: resume.experience.map((role) => ({
+      ...role,
+      bullets: dropDuplicateBullets(role.bullets),
+    })),
+    projects: resume.projects.map((project) => ({
+      ...project,
+      bullets: dropDuplicateBullets(project.bullets),
+    })),
+  };
+}
+
+/**
+ * Asks the model to thin out over-used keywords. Best-effort: any failure
+ * returns null and the caller keeps the (still valid) resume. Facts are
+ * force-preserved from the original via mergeDeStuffed.
+ */
+async function deStuffResume(
+  provider: AIProvider,
+  resume: OptimizedResume,
+  overused: OverusedKeyword[],
+): Promise<OptimizedResume | null> {
+  try {
+    const raw = await provider.generateJson<unknown>({
+      systemPrompt: DE_STUFF_SYSTEM_PROMPT,
+      prompt: buildDeStuffPrompt({ resume, overused }),
+      schemaHint: GENERATE_RESUME_SCHEMA_HINT,
+      temperature: 0.3,
+      maxTokens: 6000,
+    });
+    return mergeDeStuffed(resume, optimizedResumeSchema.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Merges a de-stuffed resume back onto the original, keeping all hard facts and
+ * every role/section. Prose (summary + bullets) is taken from the de-stuffed
+ * version when present, so the keyword thinning sticks; empty results fall back
+ * to the original so a model slip never drops real content.
+ */
+function mergeDeStuffed(original: OptimizedResume, updated: OptimizedResume): OptimizedResume {
+  return {
+    header: original.header,
+    summary: updated.summary.trim() || original.summary,
+    skills: updated.skills.length > 0 ? updated.skills : original.skills,
+    experience: original.experience.map((role, index) => {
+      const candidate = updated.experience[index];
+      const sameRole = candidate && candidate.company === role.company && candidate.bullets.length > 0;
+      return { ...role, bullets: sameRole ? candidate.bullets : role.bullets };
+    }),
+    projects: original.projects.map((project, index) => {
+      const candidate = updated.projects[index];
+      return {
+        ...project,
+        description: candidate?.description?.trim() || project.description,
+        bullets: candidate && candidate.bullets.length > 0 ? candidate.bullets : project.bullets,
+      };
+    }),
+    education: original.education,
+    certifications: original.certifications,
+    languages: original.languages,
+  };
+}
+
+/** Keeps the first of any near-identical bullets (token overlap >= 0.85). */
+function dropDuplicateBullets(bullets: string[]): string[] {
+  const kept: string[] = [];
+  for (const bullet of bullets) {
+    if (!kept.some((existing) => tokenOverlap(existing, bullet) >= 0.85)) {
+      kept.push(bullet);
+    }
+  }
+  return kept;
+}
+
+/** Strips travessão dashes from the resume's prose fields (summary + bullets). */
+function humanizeResumeProse(resume: OptimizedResume): OptimizedResume {
+  return {
+    ...resume,
+    summary: removeProseDashes(resume.summary),
+    experience: resume.experience.map((role) => ({
+      ...role,
+      bullets: role.bullets.map(removeProseDashes),
+    })),
+    projects: resume.projects.map((project) => ({
+      ...project,
+      description: removeProseDashes(project.description),
+      bullets: project.bullets.map(removeProseDashes),
+    })),
+  };
+}
+
+/**
  * Activity claims ("code reviews", "mentoring", team leadership...) are facts.
  * Models occasionally sneak them in because the job asks for them, so this
  * deterministic guard removes unsupported claims from the skills list and
@@ -270,6 +425,13 @@ function enforceActivityClaims(resume: OptimizedResume, candidateRawText: string
     .map((group) => ({
       ...group,
       items: group.items.filter((item) => {
+        // Fabricated technology not present anywhere in the candidate's material.
+        if (!isSkillGrounded(item, haystack)) {
+          warnings.push(
+            `Removed "${item}" from the generated skills: it does not appear in your resume or LinkedIn. Add it back only if it is genuinely true.`,
+          );
+          return false;
+        }
         const claim = unsupported(item);
         if (claim) {
           warnings.push(

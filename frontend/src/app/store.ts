@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { analysisApi } from '../features/analysis/api/analysisApi';
 import { analysisReducer } from '../features/analysis/slices/analysisSlice';
+import { trackerApi } from '../features/tracker/api/trackerApi';
 
 export const store = configureStore({
   reducer: {
     analysis: analysisReducer,
     [analysisApi.reducerPath]: analysisApi.reducer,
+    [trackerApi.reducerPath]: trackerApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -18,7 +20,7 @@ export const store = configureStore({
         ],
         ignoredPaths: ['analysisApi'],
       },
-    }).concat(analysisApi.middleware),
+    }).concat(analysisApi.middleware, trackerApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

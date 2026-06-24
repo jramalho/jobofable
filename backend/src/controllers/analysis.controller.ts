@@ -1,14 +1,22 @@
 import { Request, Response } from 'express';
 import { AIProviderFactory } from '../providers/ai/AIProviderFactory';
 import {
+  analysisIdParamSchema,
   applyKeywordsBodySchema,
   createAnalysisBodySchema,
   SavedResumeProfile,
   savedResumeProfileSchema,
 } from '../schemas/analysis.schema';
 import { runAnalysis } from '../services/analysis.service';
+import {
+  deleteAnalysis,
+  getAnalysisById,
+  listAnalyses,
+  saveAnalysis,
+} from '../services/analysisStorage.service';
+import { createApplicationFromAnalysis } from '../services/application.service';
 import { applyKeywordsToResume } from '../services/resume.service';
-import { ValidationError } from '../utils/errors';
+import { NotFoundError, ValidationError } from '../utils/errors';
 
 export async function createAnalysis(req: Request, res: Response): Promise<void> {
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
@@ -40,7 +48,64 @@ export async function createAnalysis(req: Request, res: Response): Promise<void>
     linkedInFile,
   });
 
-  res.status(201).json(result);
+  // Persist the generated result. Best-effort: a storage failure must not
+  // discard the analysis, so it is logged and the response is returned anyway
+  // (with a null id) rather than surfacing a 500 to the user.
+  let persistedAnalysisId: string | null = null;
+  try {
+    persistedAnalysisId = await saveAnalysis({
+      jobDescription: parsedBody.data.jobDescription,
+      result,
+    });
+  } catch (error) {
+    console.error('[analysis] failed to persist analysis result', error);
+  }
+
+  res.status(201).json({ ...result, persistedAnalysisId });
+}
+
+export async function getAnalyses(_req: Request, res: Response): Promise<void> {
+  const analyses = await listAnalyses();
+  res.status(200).json({ analyses });
+}
+
+export async function getAnalysis(req: Request, res: Response): Promise<void> {
+  const id = parseAnalysisId(req);
+  const analysis = await getAnalysisById(id);
+  if (!analysis) {
+    throw new NotFoundError(`Analysis "${id}" was not found.`);
+  }
+  res.status(200).json(analysis);
+}
+
+export async function removeAnalysis(req: Request, res: Response): Promise<void> {
+  const id = parseAnalysisId(req);
+  const deleted = await deleteAnalysis(id);
+  if (!deleted) {
+    throw new NotFoundError(`Analysis "${id}" was not found.`);
+  }
+  res.status(204).send();
+}
+
+/** Promotes a stored analysis into a tracked job application (idempotent). */
+export async function createAnalysisApplication(req: Request, res: Response): Promise<void> {
+  const id = parseAnalysisId(req);
+  const result = await createApplicationFromAnalysis(id);
+  if (!result) {
+    throw new NotFoundError(`Analysis "${id}" was not found.`);
+  }
+  res.status(result.created ? 201 : 200).json(result.application);
+}
+
+function parseAnalysisId(req: Request): string {
+  const parsed = analysisIdParamSchema.safeParse(req.params);
+  if (!parsed.success) {
+    throw new ValidationError(
+      parsed.error.issues[0]?.message ?? 'Invalid analysis id.',
+      parsed.error.flatten(),
+    );
+  }
+  return parsed.data.id;
 }
 
 function parseSavedProfile(raw: unknown): SavedResumeProfile | undefined {

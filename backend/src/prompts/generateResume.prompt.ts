@@ -46,6 +46,16 @@ ATS rules:
 - The summary must be specific to this job and grounded in real experience — no clichés.
 - LinkedIn data may be used to enrich entries ONLY when it does not contradict the resume.
 
+ATS keyword strategy (how to maximize match rate without lying or stuffing):
+- ATS matches text literally. For a skill the candidate genuinely has, use the JOB'S EXACT term: if the posting says "React Native", "TypeScript", "CI/CD", write it that way — not "RN", "TS" or a synonym the posting didn't use.
+- Spell an acronym out once with the short form in parentheses so BOTH forms match: "Single Sign-On (SSO)", "Continuous Integration/Continuous Delivery (CI/CD)", "Object-Relational Mapping (ORM)".
+- A skill that is both relevant AND real should appear in TWO places: the Technical Skills list AND at least one experience bullet that shows how it was used. A keyword shown in real context ranks far higher (with ATS and recruiters) than a bare list entry.
+- Front-load the summary: open it by positioning the candidate for the job's exact target title when truthful (e.g. "Senior React Native Developer with..."), then the 3-4 most important real skills that match this job in the first sentence. ATS and recruiters weight the title and summary heavily.
+- Prominence: put the single most important matching keyword in the FIRST bullet of the most relevant role, not buried at the end. Keywords high on the page rank higher.
+- Frequency: a primary keyword should appear about 2-3 times across the resume, each time in a different real context; a secondary keyword at least once. Do not exceed this.
+- The Technical Skills list contains technologies/tools/methodologies only — never responsibility phrases ("MVP delivery", "codebase ownership", "migration planning"). Those belong in experience bullets, as actions.
+- Density, not stuffing: each keyword appears a few times at most, always where it reads naturally. Walls of keywords and repetition hurt ATS ranking and human readers alike.
+
 JOB ANALYSIS:
 ${JSON.stringify(input.job, null, 2)}
 
@@ -62,7 +72,7 @@ ATS KEYWORDS FROM THE JOB THAT ARE MISSING FROM THE CANDIDATE'S CURRENT WORDING:
 ${JSON.stringify(input.missingKeywords)}
 
 For each missing keyword, decide honestly:
-- If the candidate's real experience clearly supports it, weave it in subtly — prefer the job's exact phrasing inside an EXISTING bullet, skill item or the summary, where it reads naturally. Examples of legitimate rewording: "App Store and Play Store release process" -> "app store submission workflows (App Store Connect, Google Play Console)"; "CI/CD" -> "continuous integration and continuous delivery (CI/CD)"; bridging native code -> "native modules". Do NOT stuff keywords: each one appears at most once or twice where it genuinely fits.
+- If the candidate's real experience clearly supports it, weave it in using the job's exact phrasing where it reads naturally. Best placement: name it in the Technical Skills list AND show it in an existing experience bullet that describes the real work it relates to (context beats a bare mention). Examples of legitimate rewording: "App Store and Play Store release process" -> "app store submission workflows (App Store Connect, Google Play Console)"; "CI/CD" -> "continuous integration and continuous delivery (CI/CD)"; bridging native code -> "native modules". The result must stay grammatical and natural — rephrase the surrounding sentence so the keyword fits; never jam a keyword in as a broken fragment. Do NOT stuff: each keyword appears at most once or twice, only where it genuinely fits.
 - If the experience does NOT support it (e.g. a framework or tool the candidate never used), SKIP it silently. Never list an unused technology, even inside a "familiar with" line.
 - NEVER invent a new bullet to host a keyword. Keywords may only reword bullets that describe work the candidate actually stated.
 - Activities are facts: "code reviews", "mentoring", "leading teams", "on-call" and similar may only appear if the candidate's material explicitly mentions them.
