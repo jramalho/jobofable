@@ -40,13 +40,17 @@ INSTRUCTIONS:
 ${instructionLines}
 
 How to apply each instruction:
-- Target is an EXPERIENCE: weave the keyword into one of that role's existing bullets where it reads naturally. If no existing bullet fits, add ONE short, conservative new bullet to that role describing work with that keyword — no metrics, no inflated scope. Never add it to a different role.
-- Target is the SKILLS section: add the keyword to the most fitting existing skill category, or create one sensible new category if none fits.
-- Target is the SUMMARY: mention the keyword naturally in the summary. Do not turn the summary into a keyword list.
+- Target is an EXPERIENCE: weave the keyword into one of that role's existing bullets, REWRITING the sentence so it reads naturally and shows real context (what was built or done with it). If no bullet fits, add ONE short, specific, conservative bullet about real work with that keyword — no metrics, no inflated scope. Never add it to a different role.
+- Target is the SKILLS section: add the keyword as a proper technology/tool/methodology name in the most fitting category (create one sensible category only if none fits). Never add multi-word responsibility phrases ("MVP delivery", "codebase ownership") as a skill.
+- Target is the SUMMARY: mention the keyword naturally in a sentence. Do not turn the summary into a keyword list.
+
+Quality bar (this matters most):
+- Every edit must be grammatical and sound human. If a keyword cannot fit a sentence cleanly, rephrase the whole sentence around it.
+- BAD (keyword jammed in): "Built and maintained Deep React Native experience across apps." GOOD (natural, in context): "Built and shipped production React Native screens used across the app."
 
 Strict editing rules:
 - Change ONLY what the instructions require. Every other field — header, dates, companies, titles, untouched bullets, education, certifications, languages — must be returned EXACTLY as provided.
-- Use the keyword's exact wording (it comes from the job description).
+- Use the keyword's exact wording (it comes from the job description), but adjust the surrounding words so the sentence stays correct.
 - A keyword may appear in MULTIPLE instructions (e.g. one experience AND the skills section): add it in EVERY listed target, and nowhere else. Within each target it appears once.
 - Return the COMPLETE updated resume JSON with the same structure as the input.
 

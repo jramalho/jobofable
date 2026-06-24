@@ -13,6 +13,7 @@ import {
 } from '../features/tracker/api/trackerApi';
 import { DuplicateWarning } from '../features/tracker/components/DuplicateWarning';
 import { setCurrentAnalysis } from '../features/analysis/slices/analysisSlice';
+import { AtsCoverageCard } from '../features/analysis/components/AtsCoverageCard';
 import { CoverLetterEditor } from '../features/analysis/components/CoverLetterEditor';
 import { ExportActions } from '../features/analysis/components/ExportActions';
 import { GapList } from '../features/analysis/components/GapList';
@@ -184,6 +185,8 @@ export function ResultPage() {
             missing={analysisResult.candidate.missingKeywords}
           />
         </div>
+
+        {analysisResult.atsCoverage && <AtsCoverageCard coverage={analysisResult.atsCoverage} />}
 
         <div className="grid gap-6 lg:grid-cols-2">
           <GapList

@@ -12,6 +12,7 @@ import {
   ResumeAnalysis,
 } from '../schemas/analysis.schema';
 import { CoverLetterMeta, coverLetterGenerationSchema } from '../schemas/coverLetter.schema';
+import { removeProseDashes } from '../utils/proseText';
 import { AIProviderError } from '../utils/errors';
 
 export interface GenerateCoverLetterInput {
@@ -45,7 +46,9 @@ export async function generateCoverLetter(
 
   const generation = coverLetterGenerationSchema.parse(raw);
 
-  const coverLetter = generation.coverLetter.trim();
+  // The model still slips in em dashes despite the prompt, so strip them
+  // deterministically here — this is the reliable guard.
+  const coverLetter = removeProseDashes(generation.coverLetter.trim());
   if (!coverLetter) {
     throw new AIProviderError('The AI provider returned an empty cover letter. Please try again.');
   }

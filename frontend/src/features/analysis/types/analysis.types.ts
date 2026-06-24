@@ -113,6 +113,23 @@ export interface CandidateAnalysis {
   warnings: string[];
 }
 
+export interface CoverageBreakdown {
+  score: number;
+  matched: string[];
+  missing: string[];
+}
+
+export interface AtsCoverage extends CoverageBreakdown {
+  /** Required-skill coverage (optional for analyses saved before this existed). */
+  required?: CoverageBreakdown;
+  /** Keywords repeated often enough to read as stuffing. */
+  overusedKeywords?: { keyword: string; count: number }[];
+  /** Covered keywords that only appear in low-prominence spots. */
+  buried?: string[];
+  /** Relevant acronyms present in only one form; suggested "Expansion (ACRONYM)". */
+  acronymSuggestions?: string[];
+}
+
 export interface CoverLetterMeta {
   tone: string;
   language: string;
@@ -142,6 +159,8 @@ export interface AnalysisResponse {
   optimizedResume: OptimizedResume;
   coverLetter: string;
   coverLetterMeta: CoverLetterMeta;
+  /** Deterministic ATS keyword coverage; optional for analyses saved before this existed. */
+  atsCoverage?: AtsCoverage;
   profile: ResumeProfilePayload;
   /** Database id assigned when the result was persisted; null if persistence failed. */
   persistedAnalysisId?: string | null;
